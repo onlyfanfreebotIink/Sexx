@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive WebGL Interface</title>
+    <style>
+        @import url(https://fonts.bunny.net/css?family=doppio-one:400);
+
+        :root {
+            --clr-txt: rgb(8, 47, 73);
+            --clr-border: rgb(8, 47, 73);
+            --clr-cta: rgb(2, 132, 199);
+            --link-bg: linear-gradient(90deg, #FF5722, #FFC107);
+            --link-hover: #f39c12;
+            --link-border: #e67e22;
+            --glow-color: #ff007f; /* Pink glow color */
+            --modal-bg: rgba(0, 0, 0, 0.8);
+            --link-18-bg: linear-gradient(90deg, #f50d0d, #ff6600); /* Hot red to orange gradient */
+            --link-18-hover: #ff3300; /* Bright red hover color */
+        }
+
+        body {
+            background: white;
+            color: rgb(203, 213, 225);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            font-family: system-ui;
+            background-image: radial-gradient(var(--clr-border), black);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 2;
+            position: relative;
+        }
+
+        .main-content {
+            display: none;
+            text-align: center;
+            padding: 50px;
+        }
+
+        .main-content a {
+            display: inline-block;
+            margin: 20px;
+            padding: 15px 30px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 1.2rem;
+            font-weight: bold;
+            background: var(--link-bg);
+            color: #fff;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+            border: 2px solid transparent;
+            cursor: pointer;
+        }
+
+        .main-content a:hover {
+            transform: scale(1.1);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.3);
+            background: var(--link-hover);
+            border: 3px solid var(--link-border);
+            animation: glow 1s infinite alternate;
+        }
+
+        .main-content a:active {
+            background: var(--link-bg);
+        }
+
+        .main-content a:focus {
+            outline: none;
+        }
+
+        .main-content a.hot-link {
+            background: var(--link-18-bg); /* Hot red gradient */
+            color: white;
+            box-shadow: 0 8px 15px rgba(255, 0, 0, 0.5); /* Red shadow */
+        }
+
+        .main-content a.hot-link:hover {
+            background: var(--link-18-hover);
+            animation: shake 0.5s infinite alternate;
+            transform: scale(1.1) rotate(5deg);
+        }
+
+        /* Pink glowing effect */
+        @keyframes glow {
+            0% {
+                text-shadow: 0 0 5px var(--glow-color), 0 0 10px var(--glow-color), 0 0 15px var(--glow-color), 0 0 20px var(--glow-color);
+            }
+            100% {
+                text-shadow: 0 0 20px var(--glow-color), 0 0 30px var(--glow-color), 0 0 40px var(--glow-color), 0 0 50px var(--glow-color);
+            }
+        }
+
+        @keyframes shake {
+            0% {
+                transform: scale(1.1) rotate(0deg);
+            }
+            100% {
+                transform: scale(1.1) rotate(-5deg);
+            }
+        }
+
+        .radio-btn-group {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .radio-btn-group input[type="radio"] {
+            display: none;
+        }
+
+        .radio-btn-group label {
+            background: var(--clr-cta);
+            padding: 15px 30px;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .radio-btn-group label:hover {
+            background: rgb(0, 105, 165);
+        }
+
+        #questionText {
+            font-size: 2rem;
+            font-weight: 500;
+            margin-bottom: 20px;
+        }
+
+        #canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* Ensure that buttons are clickable */
+        .container, .main-content, .radio-btn-group {
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Modal style */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--modal-bg);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            z-index: 3;
+            animation: slideDown 0.5s ease-out;
+        }
+
+        @keyframes slideDown {
+            0% {
+                transform: translateY(-50px) translateX(-50%);
+                opacity: 0;
+            }
+            100% {
+                transform: translateY(0) translateX(-50%);
+                opacity: 1;
+            }
+        }
+
+        .modal p {
+            font-size: 1.2rem;
+            color: white;
+        }
+
+        .modal button {
+            background: red;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        .modal button:hover {
+            background: darkred;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container" id="questionContainer">
+        <h2 id="questionText">Do you use Telegram?</h2>
+        <div class="radio-btn-group">
+            <input type="radio" name="telegram-option" value="yes" id="yes" />
+            <label for="yes" onclick="handleYes()">Yes</label>
+        </div>
+        <div class="radio-btn-group">
+            <input type="radio" name="telegram-option" value="no" id="no" />
+            <label for="no" onclick="handleNo()">No</label>
+        </div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <div class="main-content" id="mainContent">
+        <h1>Welcome to the Adult 18+ Page</h1>
+        <a href="https://t.me/MidasRWA_bot/app?startapp=ref_25e58945-1ef1-4aa1-bb96-c0dd1d12841d" target="_blank" onclick="showModal('firstLink')" class="hot-link">Click 18+ Link 1</a>
+        <a href="https://t.me/blum/app?startapp=ref_LsVxMHfqXc" target="_blank" class="hot-link">Click 18+ Link 2</a>
+    </div>
+
+    <!-- Modal for "Yes" Click -->
+    <div class="modal" id="yesModal">
+        <p>Sorry for redirecting, we are moving you to the required site!</p>
+        <button onclick="closeModal()">X</button>
+    </div>
+
+    <!-- Modal for "Link 1" -->
+    <div class="modal" id="link1Modal">
+        <p>It seems like there was an issue with the previous link, please try Link 2.</p>
+        <button onclick="closeModal()">X</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/twgl.js"></script>
+    <script>
+        // WebGL and texture handling
+        const woodTexture = "https://assets.codepen.io/163598/tile01.jpg";
+        const stoneTexture = "https://assets.codepen.io/163598/tile012.jpg";
+        const textureList = [stoneTexture, woodTexture];
+        let glcanvas = document.getElementById("canvas");
+        let gl = glcanvas.getContext("webgl2");
+
+        const programInfo = twgl.createProgramInfo(gl, [
+            "vertexShader",
+            "fragmentShader"
+        ]);
+        const arrays = {
+            position: [-1, -1, 0, 1, -1, 0, -1, 1, 0, -1, 1, 0, 1, -1, 0, 1, 1, 0]
+        };
+        const bufferInfo = twgl.createBufferInfoFromArrays(gl, arrays);
+        const mouse = new Mouse(glcanvas);
+
+        let texts;
+        const getImage = (url) => {
+            return new Promise((resolve, reject) => {
+                let img = new Image();
+                img.crossOrigin = "anonymous";
+                img.addEventListener("load", (e) => resolve(img));
+                img.addEventListener("error", () => {
+                    reject(new Error(`Failed to load image's URL: ${url}`));
+                });
+                img.src = url;
+            });
+        };
+
+        const loadTexture = (imageList) => {
+            let promises = imageList.map((item) => getImage(item));
+            Promise.all(promises).then((images) => {
+                const txtImages = images.map((item) => {
+                    return { src: item, mag: gl.NEAREST };
+                });
+                texts = twgl.createTextures(gl, {
+                    iChannel0: txtImages[0],
+                    iChannel1: txtImages[1]
+                });
+                let uniforms = {
+                    iChannel0: texts.iChannel0,
+                    iChannel1: texts.iChannel1
+                };
+                gl.useProgram(programInfo.program);
+                twgl.setBuffersAndAttributes(gl, programInfo, bufferInfo);
+                twgl.setUniforms(programInfo, uniforms);
+                twgl.drawBufferInfo(gl, bufferInfo);
+            });
+        };
+
+        const render = (time) => {
+            twgl.resizeCanvasToDisplaySize(gl.canvas, 1.0);
+            gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
+            let uniforms;
+            const factor = 0.15;
+            let umouse = [mouse.x, mouse.y, 0];
+            let tmouse = umouse;
+            tmouse[0] = tmouse[0] - (tmouse[0] - umouse[0]) * factor;
+            tmouse[1] = tmouse[1] - (tmouse[1] - umouse[1]) * factor;
+            tmouse[2] = mouse.drag ? 1 : -1;
+
+            uniforms = {
+                u_time: time * 0.001,
+                u_mouse: tmouse,
+                u_resolution: [gl.canvas.width, gl.canvas.height]
+            };
+
+            gl.useProgram(programInfo.program);
+            twgl.setBuffersAndAttributes(gl, programInfo, bufferInfo);
+            twgl.setUniforms(programInfo, uniforms);
+            twgl.drawBufferInfo(gl, bufferInfo);
+            requestAnimationFrame(render);
+        };
+
+        window.addEventListener("DOMContentLoaded", (event) => {
+            loadTexture(textureList);
+            requestAnimationFrame(render);
+        });
+
+        // Function to handle 'Yes' click event
+        function handleYes() {
+            document.getElementById("questionContainer").style.display = "none";
+            document.getElementById("mainContent").style.display = "block";
+            window.location.href = 'https://t.me/PAWSOG_bot/PAWS?startapp=WZWswyx2';
+            document.getElementById("yesModal").style.display = "block";
+        }
+
+        // Function to handle 'No' click event
+        function handleNo() {
+            document.getElementById("questionContainer").style.display = "none";
+            document.getElementById("mainContent").style.display = "block";
+            window.location.href = 'https://play.google.com/store/apps/details?id=org.telegram.messenger';
+            localStorage.setItem('telegramChoice', 'no');
+            setTimeout(function() {
+                document.getElementById("mainContent").style.display = "none";
+                document.getElementById("questionContainer").style.display = "block";
+                localStorage.removeItem('telegramChoice');
+            }, 1000); 
+        }
+
+        window.onload = function() {
+            localStorage.removeItem('telegramChoice');
+        };
+
+        // Show modal for Link 1
+        function showModal(link) {
+            if (link === 'firstLink') {
+                document.getElementById("link1Modal").style.display = "block";
+            }
+        }
+
+        // Close the modal
+        function closeModal() {
+            document.getElementById("yesModal").style.display = "none";
+            document.getElementById("link1Modal").style.display = "none";
+        }
+    </script>
+
+</body>
+</html>
